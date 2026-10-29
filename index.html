@@ -131,6 +131,7 @@ button,a,.checks label{touch-action:manipulation;-webkit-tap-highlight-color:tra
 
   <div class="chips" id="townChips" role="group" aria-label="Filter by town"></div>
   <div class="chips" id="tagChips" role="group" aria-label="Filter by type"></div>
+  <div class="chips" id="dayChips" role="group" aria-label="Filter by day"></div>
 
   <section class="week" id="week" aria-label="Specials by day"></section>
 
@@ -228,7 +229,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function load(){try{const r=localStorage.getItem(KEY);if(r){const v=JSON.parse(r);if(Array.isArray(v))return v;}}catch(e){}return STARTER.slice();}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(items));}catch(e){}}
-let items=load(), townFilter="All", tagFilter=null, editingId=null, pendingDelete=null;
+let items=load(), dayFilter="today", townFilter="All", tagFilter=null, editingId=null, pendingDelete=null;
 try{townFilter=localStorage.getItem(KEY+".town")||"All";}catch(e){}
 
 function info(s,key){if(s[key])return s[key];const o=items.find(x=>x.name===s.name&&(x.town||"")===(s.town||"")&&x[key]);return o?o[key]:"";}
@@ -253,6 +254,7 @@ function render(){
   if(!towns.includes(townFilter))townFilter="All";
   $("townChips").innerHTML=`<span class="lbl">Town</span>`+towns.map(x=>`<button class="chip" type="button" data-town="${esc(x)}" aria-pressed="${x===townFilter}">${esc(x)}</button>`).join("");
   $("tagChips").innerHTML=`<span class="lbl">Type</span>`+TAGS.map(([k,l])=>`<button class="chip" type="button" data-tag="${k}" aria-pressed="${k===tagFilter}">${esc(l)}</button>`).join("");
+  $("dayChips").innerHTML=`<span class="lbl">Day</span>`+[["today","Today"],["all","All"]].map(([k,l])=>`<button class="chip" type="button" data-day="${k}" aria-pressed="${k===dayFilter}">${l}</button>`).join("");
   const tn=vis.filter(s=>(s.days||[]).includes(t));
   $("tonightEyebrow").textContent=`Tonight · ${DAYS[t]}`;
   if(tn.length){$("tonightTitle").textContent=tn.length===1?"One deal tonight":`${tn.length} deals tonight`;
@@ -260,10 +262,10 @@ function render(){
   else{const next=[1,2,3,4,5,6].map(i=>(t+i)%7).find(d=>vis.some(s=>(s.days||[]).includes(d)));
     $("tonightTitle").textContent="No specials tonight";
     $("tonightList").innerHTML=`<div>${next!==undefined?`Next up: ${DAYS[next]} (${[...new Set(vis.filter(s=>(s.days||[]).includes(next)).map(s=>s.name))].map(esc).join(", ")}).`:"Nothing on the board for this filter."}</div>`;}
-  $("week").innerHTML=ORDER.map(d=>{const list=vis.filter(s=>(s.days||[]).includes(d)).sort((a,b)=>a.name.localeCompare(b.name));
+  $("week").innerHTML=(dayFilter==="today"?[t]:ORDER).map(d=>{const list=vis.filter(s=>(s.days||[]).includes(d)).sort((a,b)=>a.name.localeCompare(b.name));
     return `<div class="day ${d===t?"today":""}"><div class="dname">${DAYS[d]}${d===t?"<small>Today</small>":""}</div><div class="items">${list.length?list.map(card).join(""):`<div class="empty">No specials on the board.</div>`}</div></div>`}).join("");
   const lk=vis.filter(s=>!(s.days||[]).length);
-  $("lookup").hidden=!lk.length; $("lookupItems").innerHTML=lk.map(card).join("");
+  $("lookup").hidden=!lk.length||dayFilter==="today"; $("lookupItems").innerHTML=lk.map(card).join("");
   $("names").innerHTML=[...new Set(items.map(s=>s.name))].map(n=>`<option value="${esc(n)}">`).join("");
   $("towns").innerHTML=[...new Set(["Lapeer","Clarkston","Lake Orion","Metamora",...items.map(s=>s.town).filter(Boolean)])].map(n=>`<option value="${esc(n)}">`).join("");
 }
@@ -292,6 +294,7 @@ $("form").addEventListener("submit",e=>{
 document.addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b)return;
   if(b.dataset.town!==undefined){townFilter=b.dataset.town;try{localStorage.setItem(KEY+".town",townFilter)}catch(e){}render();}
+  else if(b.dataset.day){dayFilter=b.dataset.day;render();}
   else if(b.dataset.tag){tagFilter=tagFilter===b.dataset.tag?null:b.dataset.tag;render();}
   else if(b.dataset.edit){openForm(items.find(s=>s.id===b.dataset.edit));}
   else if(b.dataset.askdel){const id=b.dataset.askdel;pendingDelete=id;render();setTimeout(()=>{if(pendingDelete===id){pendingDelete=null;render();}},4000);}
