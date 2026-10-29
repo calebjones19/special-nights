@@ -37,12 +37,13 @@ button{font:inherit;cursor:pointer}
 .btn{background:var(--ketchup);color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:700}
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 :focus-visible{outline:3px solid var(--mustard);outline-offset:2px}
-.tonight{background:var(--ink);color:var(--bg);border-radius:18px;padding:18px 20px;display:grid;gap:10px}
-.tonight .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mustard);font-weight:700}
-.tonight h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0}
-.tonight .list{display:grid;gap:8px}
-.tonight .row{display:flex;gap:4px 10px;align-items:baseline;flex-wrap:wrap}
-.tonight .row .t{opacity:.75;font-size:13px}
+.tonight{display:grid;gap:6px;padding-bottom:18px;border-bottom:2px dashed var(--line)}
+.tonight .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mustard);font-weight:700}
+.tonight h2{font-family:var(--display);font-weight:400;font-size:clamp(34px,9vw,52px);line-height:1;margin:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tonight .count{font-family:var(--body);font-size:14px;font-weight:700;background:var(--ketchup);color:#fff;border-radius:999px;padding:5px 12px;letter-spacing:.02em;white-space:nowrap}
+.tonight .count.zero{background:var(--chip);color:var(--muted)}
+.tonight .list{color:var(--muted);font-size:15px}
+.tonight .list b{color:var(--ink);font-weight:600}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{background:var(--chip);color:var(--ink);border:1.5px solid transparent;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
@@ -70,8 +71,6 @@ button{font:inherit;cursor:pointer}
 .go a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--ink)}
 .go a.call{border-color:var(--pickle);color:var(--pickle)}
 .go a.map{border-color:var(--ketchup);color:var(--ketchup)}
-.tonight .go a{border-color:rgba(255,255,255,.35);color:inherit;padding:4px 10px;font-size:12px}
-@media (prefers-color-scheme: dark){.tonight .go a{border-color:rgba(0,0,0,.3)}}
 .lookup h3{font-family:var(--display);font-weight:400;font-size:18px;margin:0 0 8px}
 footer{display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
 dialog{border:0;border-radius:16px;padding:0;background:var(--surface);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
@@ -100,8 +99,6 @@ button,a,.checks label{touch-action:manipulation;-webkit-tap-highlight-color:tra
   .chips::-webkit-scrollbar{display:none}
   .chip,.chips .lbl{flex:none}
   .wrap{gap:18px;padding-block:14px 48px}
-  .tonight{padding:16px}
-  .tonight h2{font-size:22px}
 }
 /* Duo folded outer screen, small phones, narrow split view */
 @media (max-width:380px){
@@ -256,12 +253,13 @@ function render(){
   $("tagChips").innerHTML=`<span class="lbl">Type</span>`+TAGS.map(([k,l])=>`<button class="chip" type="button" data-tag="${k}" aria-pressed="${k===tagFilter}">${esc(l)}</button>`).join("");
   $("dayChips").innerHTML=`<span class="lbl">Day</span>`+[["today","Today"],["all","All"]].map(([k,l])=>`<button class="chip" type="button" data-day="${k}" aria-pressed="${k===dayFilter}">${l}</button>`).join("");
   const tn=vis.filter(s=>(s.days||[]).includes(t));
-  $("tonightEyebrow").textContent=`Tonight · ${DAYS[t]}`;
-  if(tn.length){$("tonightTitle").textContent=tn.length===1?"One deal tonight":`${tn.length} deals tonight`;
-    $("tonightList").innerHTML=tn.map(s=>`<div class="row"><b>${esc(s.name)}</b><span>${esc(s.deal||"")}</span><span class="t">${esc(s.town||"")}${s.time?" · "+esc(s.time):""}${s.verify?" · verify first":""}</span>${goLinks(s)}</div>`).join("");}
+  $("tonightEyebrow").textContent="Tonight";
+  const names=[...new Set(tn.map(s=>s.name))];
+  if(tn.length){$("tonightTitle").innerHTML=`${DAYS[t]} <span class="count">${tn.length===1?"1 deal":tn.length+" deals"}</span>`;
+    $("tonightList").innerHTML=names.map(n=>`<b>${esc(n)}</b>`).join(" · ");}
   else{const next=[1,2,3,4,5,6].map(i=>(t+i)%7).find(d=>vis.some(s=>(s.days||[]).includes(d)));
-    $("tonightTitle").textContent="No specials tonight";
-    $("tonightList").innerHTML=`<div>${next!==undefined?`Next up: ${DAYS[next]} (${[...new Set(vis.filter(s=>(s.days||[]).includes(next)).map(s=>s.name))].map(esc).join(", ")}).`:"Nothing on the board for this filter."}</div>`;}
+    $("tonightTitle").innerHTML=`${DAYS[t]} <span class="count zero">No deals</span>`;
+    $("tonightList").innerHTML=next!==undefined?`Next up ${DAYS[next]}: ${[...new Set(vis.filter(s=>(s.days||[]).includes(next)).map(s=>s.name))].map(n=>`<b>${esc(n)}</b>`).join(" · ")}`:"Nothing on the board for this filter.";}
   $("week").innerHTML=(dayFilter==="today"?[t]:ORDER).map(d=>{const list=vis.filter(s=>(s.days||[]).includes(d)).sort((a,b)=>a.name.localeCompare(b.name));
     return `<div class="day ${d===t?"today":""}"><div class="dname">${DAYS[d]}${d===t?"<small>Today</small>":""}</div><div class="items">${list.length?list.map(card).join(""):`<div class="empty">No specials on the board.</div>`}</div></div>`}).join("");
   const lk=vis.filter(s=>!(s.days||[]).length);
